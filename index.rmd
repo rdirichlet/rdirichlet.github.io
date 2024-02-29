@@ -8,11 +8,12 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-$$\bar{x} = \frac{\sum_{i=1}^{n}x_i}{n}$$
+## About Me
 
-```{r}
-set.seed(123)
-x <- rnorm(100)
-mean(x)
-```
+My name is Jeremy Austin and I am a PhD student in statistics at Michigan State University. This page is currently under construction for posting brief discussions on topics that I find interesting.
 
+## In The Works
+
+Variational Methods Writing Project (unfinished and many statements w/o proof or citation)
+
+- [Variational_Methods](./Variational_Methods/Variational_Methods.html)
