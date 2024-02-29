@@ -1,0 +1,216 @@
+---
+title: "Variational Methods For Statistics"
+author: "Jeremy Austin"
+date: "2024-01-27"
+output:
+  html_document:
+    toc: true
+    df_print: paged
+  pdf_document:
+    toc: true
+  word_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=F, include=F}
+# Call Necessary Libraries
+
+```
+
+# Introduction
+
+\textcolor{red}{
+  TODO: finish introduction
+}
+
+# Some Motivations For Variational Methods
+
+## A Problem in Bayesian Statistics
+
+Typically, in Bayesian statistics, the objective is to find a posterior distribution of parameters and then perform inference. This distribution can be difficult to solve and sample from. The intuition behind it is based on Bayes' formula, which can be thought of as a rule for updating beliefs about a system, provided some additional information or data.
+
+$$P(A|B) = \frac{P(A,B)}{P(B)} = \frac{P(B|A)P(A)}{\Sigma_i P(B|A_i)P(A_i)}$$
+
+Some definitions:
+
+- $\theta$:
+
+  * The vector of model parameters
+
+- $D$:
+
+  * The data. This is usually a combination of independent and dependent variables.
+
+\newpage
+
+- Prior distribution of parameters:
+
+  \Large$$P(\theta)$$
+
+```{r fig.align="center", echo=F}
+par(mar=c(4,4,.1,1), oma=c(0,0,0,0))
+curve(dbeta(x,2,2), 0, 1, ylim = c(0,2), col = "red", lwd=2,
+      xlab=expression(theta), ylab="Density")
+```
+
+The distribution of the parameters prior to obtaining information through collecting data. Typically, the prior distribution is not known. Choices for the prior may have a variety of motivating factors. If there is some knowledge about the parameters before collecting data, it would be useful to encode it as the prior. This knowledge could come from expert opinion or past experiments. However, it is common that there is no knowledge to begin with. An honest choice in this situation could be to assign the prior distribution to be one with high entropy. In other words, a distribution that makes very little assumptions about likely parameter settings; one that is flat or uniform across the parameter space. Another popular choice for priors are ones that encourage shrinkage. These would be distributions with centers near 0 in the parameter space. It turns out that for many complex problems, biasing towards 0 yields better estimators.
+
+\newpage
+
+- Joint distribution of the data given parameters (likelihood):
+
+  \Large$$P(D|\theta)$$
+
+```{r fig.align="center", echo=F}
+set.seed(1248)
+D <- rbinom(15, 1, 0.2)
+lik <- function(x){prod(dbinom(D,1,x))}
+lik <- Vectorize(lik)
+
+par(mar=c(4,4,.1,1), oma=c(0,0,0,0))
+curve(lik(x), 0, 1, col = "darkgreen", lwd=2,
+      xlab=expression(theta), ylab="Density")
+```
+
+The distribution of the data when the parameter setting is known. In classical statistics, finding the parameter setting which achieves the highest likelihood is a primary objective. In order to calculate the likelihood for a given parameter setting, it is typically assumed that all observations of the data are independent of each other, and all follow the same distribution. This distribution is usually determined by the type of the responses. For example, linear regression assumes $y_i \sim Normal(X_i\beta, \sigma^2)$ $\forall{i=1,...,n}$ and logistic regression assumes $y_i \sim Bernoulli(plogis(X_i\beta))$ $\forall{i=1,...,n}$. The independence property allows us to decompose the high dimensional joint distribution as the product of all the marginal distributions. When there is a lot of data, evaluating this distribution at a parameter setting usually yields exceptionally small numbers. To circumvent this for maximization, log is usually taken and the product becomes sum of logs.
+
+\newpage
+
+- Marginal distribution of the data (evidence):
+
+  \Large$$P(D) = \int_{\theta}{P(D|\theta)P(\theta)d\theta}$$
+
+```{r fig.align="center", echo=F}
+const <- function(x){
+  gamma(2+sum(D))*gamma(2+15-sum(D))/gamma(2+sum(D)+2+15-sum(D))
+}
+const <- Vectorize(const)
+
+par(mar=c(4,4,.1,1), oma=c(0,0,0,0))
+curve(const(x), 0, 1, col = "blue", lwd=2,
+      xlab=expression(theta), ylab="Density")
+
+```
+
+
+The distribution of the data under the model after marginalizing away the model's parameters. To find the marginal distribution of the data for a given model, it is useful to apply the law of total probability and the product rule to decompose it. $P(D) = \int_{\theta}{P(D,\theta)d\theta} = \int_{\theta}{P(D|\theta)P(\theta)d\theta}$. Because the data is known, this ends up being a constant with respect to the parameters. It is often times intractable, thus creating some problems for finding the exact posterior distribution. Another motivation for finding this quantity is in Bayesian model comparison as it is the value used in Bayes Factors. A Bayes factor is simply a ratio of the evidences of two competing models, without considering any particular parameter settings.
+  
+\newpage
+
+- Posterior distribution of the parameters, given the data:
+
+  \Large$$P(\theta|D) = \frac{P(D|\theta)P(\theta)}{P(D)}$$
+
+```{r fig.align="center", echo=F}
+par(mar=c(4,4,.1,1), oma=c(0,0,0,0))
+curve(dbeta(x,2+sum(D),2+15-sum(D)), 0, 1, lwd=2,
+      xlab=expression(theta), ylab="Density")
+```
+
+The distribution of the parameters, after considering the information provided from the collected data. This is the primary objective in Bayesian model fitting and inference. Using Bayes' formula we have: posterior = prior * likelihood / marginal. This distribution can be maximized with respect to the parameters to find maximum a posteriori estimators. Depending on the choice of prior, it can also effectively describe the remaining uncertainty in the model parameters and be sampled from. However, calculating the marginalization factor and sampling from this distribution can be difficult, especially when the number of parameters is high. This is the problem that needs to be addressed in Bayesian statistics.
+
+\newpage
+
+The most frequently discussed way for handling the issues of the posterior distribution are Markov chain Monte Carlo sampling (MCMC) methods. These include algorithms like Gibbs' Sampling, and Metropolis-Hastings variants. These methods allow one to sample from the posterior distribution, by leveraging the stationary distribution of a markov chain. In fact, the posterior distribution only needs to be known up to proportionality to use these methods. This means we can avoid the tricky marginalization factor. The samples can be used to find estimators, describe uncertainty of the parameters, and perform other kinds of inference. Unfortunately, MCMC methods are not very scalable. They are also sensitive to proposal distributions, and convergence can be slow and difficult to achieve in high dimensions. The main advantage of MCMC is its simplicity, and ability to retrieve samples from the true posterior distribution. An alternative to MCMC is variational inference. Instead of sampling or describing the posterior exactly, the idea is to fit a surrogate in its place. If the surrogate is chosen carefully and properly optimized, it can be used to perform all the necessary inference that would be performed on the true posterior. The main advantage is the scalability of these methods, at the cost of not modeling the true posterior, and often-times underestimating covariance.
+
+
+\textcolor{red}{
+  TODO: finish Bayesian motivation
+}
+
+## Extending The Functionality of Autoencoders
+
+\textcolor{red}{
+  TODO: finish autoencoder motivation
+}
+
+# Distances Between Distributions
+
+In order to fit a surrogate distribution in place of another, one must define a quantity that measures how far apart two distributions are from each other. Minimizing this quantity will be the objective for the surrogate. For the following discussion, let $p(x)$ represent a probability distribution, and $q(x)$ to be a surrogate. A fairly intuitive measure might be:
+
+Discrete:
+$$d_1(p,q) = \sum_{x}|p(x)-q(x)|$$
+
+Continuous:
+$$d_1(p,q) = \int_{x}|p(x)-q(x)|dx$$
+
+This quantity measures the size of the region between the two probability distributions. If p and q are the same, the size of the region between them will be 0. Due to the absolute values, this quantity will also be symmetric (d(p,q)=d(q,p)) and satisfy triangle inequality properties. Below is a nice visualization of this quantity:
+
+```{r fig.align="center", echo=F}
+x <- seq(-1,10,0.01)
+p <- dgamma(x,3,1)
+q <- dnorm(x,3)
+n <- length(x)
+plot(x, p, "l", ylab = "Density", lwd=3, col="black", ylim=c(0,0.4))
+lines(x, q, lwd=3, col="purple")
+polygon(c(x,rev(x)), 
+        c(pmin(p[1:n],q[1:n]), pmax(p[n:1],q[n:1])), 
+        col=rgb(0.75,0,0.1,0.25))
+legend("topright",
+       fill=c("black","purple", rgb(0.75,0,0.1,0.25)),
+       legend=c("p(x)","q(x)","d(p,q)"))
+```
+
+The area of the shaded region is the same as the measure discussed above. One noticeable problem with this quantity is that the probabilities are stuck inside the absolute value in the sum. If p and q were high-dimensional joint distributions, p(x) and q(x) may be extremely small, possibly much smaller than a computer can reasonable represent. [Here is a link to an interactive graph in desmos](https://www.desmos.com/calculator/4tc9q012b5). The interactive graph represents the shaded region in a slightly different way, but is equivalent in terms of area.
+
+Another intuitive quantity could be related to the size of the region of the product of p and q:
+
+Discrete:
+$$d_2(p,q)=-log(\sum_{x}p(x)q(x))$$
+
+Continuous:
+$$d_2(p,q)=-log(\int_{x}p(x)q(x)dx)$$
+
+Another representation using expectation:
+$$d_2(p,q) = -log(E_p(q(x))) = -log(E_q(p(x)))$$
+
+Minimizing this quantity encourages q to have regions of high probability that match p. If p and q start becoming very different from each other, $1/E_q(p(x))$ will grow extremely quickly. Because this is just a toy quantity, I decided to regularize this exploding growth by taking the logarithm. Below is a nice visualization, and hopefully supports the intuitiveness of this quantity.
+
+```{r fig.align="center", echo=F}
+par(mfrow=c(1,2))
+x <- seq(-1,10,0.01)
+p <- dgamma(x,3,1)
+q1 <- dnorm(x,3)
+n <- length(x)
+plot(x, p, "l", main = "q similar to p", ylab = "Density", lwd=3, col="black", ylim=c(0,0.4))
+lines(x, q1, lwd=3, col="purple")
+lines(x, p*q1, lwd=3, col="red")
+polygon(c(x,rev(x)), 
+        c(rep(0,length(x)), (p*q1)[n:1]), 
+        col=rgb(0.75,0,0.1,0.25))
+legend("topright",
+       fill=c("black","purple", "red", rgb(0.75,0,0.1,0.25)),
+       legend=c("p(x)","q(x)","q(x)p(x)","E_q(p(x))"),
+       cex=0.7)
+
+
+q2 <- dnorm(x,6)
+plot(x, p, "l", main = "q less similar to p", ylab = "", lwd=3, col="black", ylim=c(0,0.4))
+lines(x, q2, lwd=3, col="purple")
+lines(x, p*q2, lwd=3, col="red")
+polygon(c(x,rev(x)), 
+        c(rep(0,length(x)), (p*q2)[n:1]), 
+        col=rgb(0.75,0,0.1,0.25))
+legend("topright",
+       fill=c("black","purple", "red", rgb(0.75,0,0.1,0.25)),
+       legend=c("p(x)","q(x)","q(x)p(x)","E_q(p(x))"),
+       cex=0.7)
+```
+
+All that has happened with the mentioned quantity is to take the log of the inverse of the area of the shaded region. It is neat that we can decompose the integral to be an expected value with respect to q. This means that p might only need be known up to a constant for minimization and we can estimate this quantity by sampling from q. Unfortunately, once again, the probabilities are stuck inside the integral, and it runs into a similar problem as the first. It also fails to meet certain criteria that would qualify it as a metric. One of these failures is that the quantity may not be 0 when q = p. Once again, [here is a link to an interactive graph in desmos](https://www.desmos.com/calculator/2snfgwx8s1).
+
+\textcolor{red}{
+  TODO: finish KL-divergence section
+}
+
+# Citations
+
+\textcolor{red}{
+  TODO: finish citations
+}
+
+  
