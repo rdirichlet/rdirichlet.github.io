@@ -47,7 +47,7 @@ Some definitions:
 
 \newpage
 
-- Prior distribution of parameters:
+#### Prior distribution of parameters:
 
   \Large$$P(\theta)$$
 
@@ -61,7 +61,7 @@ The distribution of the parameters prior to obtaining information through collec
 
 \newpage
 
-- Joint distribution of the data given parameters (likelihood):
+#### Joint distribution of the data given parameters (likelihood):
 
   \Large$$P(D|\theta)$$
 
@@ -80,7 +80,7 @@ The distribution of the data when the parameter setting is known. In classical s
 
 \newpage
 
-- Marginal distribution of the data (evidence):
+#### Marginal distribution of the data (evidence):
 
   \Large$$P(D) = \int_{\theta}{P(D|\theta)P(\theta)d\theta}$$
 
@@ -101,7 +101,7 @@ The distribution of the data under the model after marginalizing away the model'
   
 \newpage
 
-- Posterior distribution of the parameters, given the data:
+#### Posterior distribution of the parameters, given the data:
 
   \Large$$P(\theta|D) = \frac{P(D|\theta)P(\theta)}{P(D)}$$
 
@@ -130,7 +130,12 @@ The most frequently discussed way for handling the issues of the posterior distr
 
 # Distances Between Distributions
 
-In order to fit a surrogate distribution in place of another, one must define a quantity that measures how far apart two distributions are from each other. Minimizing this quantity will be the objective for the surrogate. For the following discussion, let $p(x)$ represent a probability distribution, and $q(x)$ to be a surrogate. A fairly intuitive measure might be:
+In order to fit a surrogate distribution in place of another, one must define a quantity that measures how far apart two distributions are from each other. Minimizing this quantity will be the objective for the surrogate. For the following discussion, let $p(x)$ represent a probability distribution, and $q(x)$ to be a surrogate. 
+
+
+#### Sum of Absolute Differences
+
+A fairly intuitive measure might be:
 
 Discrete:
 $$d_1(p,q) = \sum_{x}|p(x)-q(x)|$$
@@ -138,7 +143,7 @@ $$d_1(p,q) = \sum_{x}|p(x)-q(x)|$$
 Continuous:
 $$d_1(p,q) = \int_{x}|p(x)-q(x)|dx$$
 
-This quantity measures the size of the region between the two probability distributions. If p and q are the same, the size of the region between them will be 0. Due to the absolute values, this quantity will also be symmetric (d(p,q)=d(q,p)) and satisfy triangle inequality properties. Below is a nice visualization of this quantity:
+This quantity measures the size of the region between the two probability distributions. If p and q are the same, the size of the region between them will be 0. If p and q are very different (ie probability regions do not overlap), the quantiy will approach 2. Due to the absolute values, this quantity will also be symmetric (d(p,q)=d(q,p)) and satisfy triangle inequality properties. Below is a nice visualization of this quantity:
 
 ```{r fig.align="center", echo=F}
 x <- seq(-1,10,0.01)
@@ -155,53 +160,80 @@ legend("topright",
        legend=c("p(x)","q(x)","d(p,q)"))
 ```
 
-The area of the shaded region is the same as the measure discussed above. One noticeable problem with this quantity is that the probabilities are stuck inside the absolute value in the sum. If p and q were high-dimensional joint distributions, p(x) and q(x) may be extremely small, possibly much smaller than a computer can reasonable represent. [Here is a link to an interactive graph in desmos](https://www.desmos.com/calculator/4tc9q012b5). The interactive graph represents the shaded region in a slightly different way, but is equivalent in terms of area.
+The area of the shaded region is the same as the measure discussed above. One noticeable problem with this quantity is that the probabilities are stuck inside the absolute value in the sum. If p and q were high-dimensional joint distributions, p(x) and q(x) may be extremely small, possibly much smaller than a computer can reasonable represent. [Here is a link to an interactive graph in desmos](https://www.desmos.com/calculator/9nnw8s2pia). The interactive graph represents the shaded region in a slightly different way, but is equivalent in terms of area.
 
-Another intuitive quantity could be related to the size of the region of the product of p and q:
+
+#### Kullback-Liebler Divergence
+
+This last quantity comes from information theory. It lends itself as one of the most useful quantities of divergence due to its convenient properties. Remarkably, this can be represented as a expected value with respect to the q distribution, so estimation is as easy as sampling from q. Another advantage of this formulation is that the rest of the density evaluations are wrapped inside logs. This means that the distributions can be broken into a sum of logs if each component variable of x are independent.
 
 Discrete:
-$$d_2(p,q)=-log(\sum_{x}p(x)q(x))$$
+$$D_{KL}(q||p) = \sum_{x}q(x)log(\frac{q(x)}{p(x)})$$
 
 Continuous:
-$$d_2(p,q)=-log(\int_{x}p(x)q(x)dx)$$
+$$D_{KL}(q||p) = \int_{x}q(x)log(\frac{q(x)}{p(x)})dx$$
 
 Another representation using expectation:
-$$d_2(p,q) = -log(E_p(q(x))) = -log(E_q(p(x)))$$
+$$D_{KL}(q||p) =  E_q[log(\frac{q(x)}{p(x)})] \geq 0$$
 
-Minimizing this quantity encourages q to have regions of high probability that match p. If p and q start becoming very different from each other, $1/E_q(p(x))$ will grow extremely quickly. Because this is just a toy quantity, I decided to regularize this exploding growth by taking the logarithm. Below is a nice visualization, and hopefully supports the intuitiveness of this quantity.
-
-```{r fig.align="center", echo=F}
+```{r}
 par(mfrow=c(1,2))
 x <- seq(-1,10,0.01)
 p <- dgamma(x,3,1)
 q1 <- dnorm(x,3)
 n <- length(x)
-plot(x, p, "l", main = "q similar to p", ylab = "Density", lwd=3, col="black", ylim=c(0,0.4))
+plot(x, p, "l", main = "q similar to p", ylab = "Density", lwd=3, col="black", ylim=c(-0.1,0.8))
 lines(x, q1, lwd=3, col="purple")
-lines(x, p*q1, lwd=3, col="red")
+lines(x, q1*log(q1/p), lwd=3, col="red")
 polygon(c(x,rev(x)), 
-        c(rep(0,length(x)), (p*q1)[n:1]), 
+        c(rep(0,n), (q1*log(q1/p))[n:1]), 
         col=rgb(0.75,0,0.1,0.25))
 legend("topright",
        fill=c("black","purple", "red", rgb(0.75,0,0.1,0.25)),
-       legend=c("p(x)","q(x)","q(x)p(x)","E_q(p(x))"),
+       legend=c("p(x)","q(x)","q(x)log(q(x)/p(x))","E_q(q(x)/p(x))"),
        cex=0.7)
 
 
 q2 <- dnorm(x,6)
-plot(x, p, "l", main = "q less similar to p", ylab = "", lwd=3, col="black", ylim=c(0,0.4))
+plot(x, p, "l", main = "q less similar to p", ylab = "", lwd=3, col="black", ylim=c(-0.1,0.8))
 lines(x, q2, lwd=3, col="purple")
-lines(x, p*q2, lwd=3, col="red")
+lines(x, q2*log(q2/p), lwd=3, col="red")
 polygon(c(x,rev(x)), 
-        c(rep(0,length(x)), (p*q2)[n:1]), 
+        c(rep(0,n), (q2*log(q2/p))[n:1]), 
         col=rgb(0.75,0,0.1,0.25))
-legend("topright",
+legend("topleft",
        fill=c("black","purple", "red", rgb(0.75,0,0.1,0.25)),
-       legend=c("p(x)","q(x)","q(x)p(x)","E_q(p(x))"),
+       legend=c("p(x)","q(x)","q(x)log(q(x)/p(x))","E_q(q(x)/p(x))"),
        cex=0.7)
 ```
 
-All that has happened with the mentioned quantity is to take the log of the inverse of the area of the shaded region. It is neat that we can decompose the integral to be an expected value with respect to q. This means that p might only need be known up to a constant for minimization and we can estimate this quantity by sampling from q. Unfortunately, once again, the probabilities are stuck inside the integral, and it runs into a similar problem as the first. It also fails to meet certain criteria that would qualify it as a metric. One of these failures is that the quantity may not be 0 when q = p. Once again, [here is a link to an interactive graph in desmos](https://www.desmos.com/calculator/2snfgwx8s1).
+Note that when $q(x)log(\frac{q(x)}{p(x)})$ is negative, the negative area between the curve and 0 actually shrinks the divergence. This happens when p puts probability in locations where q does not assign it. In general, when p fails to assign high probability in high probability locations of q, the divergence will be large. In turn, this quantity does not penalize when p places higher probability in locations where q does not have it. This also means that KL-divergence is not symmetric and does not qualify as a metric. The reason $D_KL(q||p)$ was discussed instead of $D_KL(p||q)$ is because usually p, the true distribution, is difficult to sample from for the estimation of the expected value. [Here is a link to desmos](https://www.desmos.com/calculator/oekzcgd9vk).
+
+#### Kullback-Liebler Divergence Continued: Evidence Lower Bound
+
+Frequently, when employing variational methods, a quantity known as evidence lower bound plays a key role. It is useful when working with latent variables or when performing Bayesian inference. Below is a manipulation of probability equations that derives it, using symbols from the Bayesian setting described in the first section. Only the continuous case is discussed.
+
+$$D_{KL}(q(\theta)||p(\theta|D)) = E_q[log(\frac{q(\theta)}{p(\theta|D)})]$$
+$$= E_q[log(\frac{q(\theta)}{\frac{p(D|\theta)p(\theta)}{p(D)}})]$$
+$$= E_q[log(\frac{q(\theta)}{p(D|\theta)p(\theta)})+ log(p(D))]$$
+
+$$= E_q[log(\frac{q(\theta)}{p(D|\theta)p(\theta)})]+ log(p(D))$$
+$$E_q[log(\frac{q(\theta)}{p(D|\theta)p(\theta)})] + log(p(D)) \geq 0$$
+$$log(p(D)) \geq -E_q[log(\frac{q(\theta)}{p(D|\theta)p(\theta)})]$$
+$$log(p(D)) \geq E_q[log(\frac{p(D|\theta)p(\theta)}{q(\theta)})]$$
+
+
+Thus, $E_q[log(\frac{p(D|\theta)p(\theta)}{q(\theta)})]$ is a lower bound on the log of the model evidence. Maximizing the evidence lower bound has the same effect as minimizing the KL divergence between $q(\theta)$ and $p(\theta|D)$ because the log model evidence can be removed from the KL divergence as an additive constant. Maximizing the evidence lower bound also gives us a better idea for the actual value of the log evidence, although it will still be biased less than the true log evidence:
+
+$$log(p(D)) = log(\int_xp(D|\theta)p(\theta)d\theta)$$
+
+$$= log(\int_xq(\theta)\frac{p(D|\theta)p(\theta)}{q(\theta)}d\theta)$$
+
+$$=log(E_q[\frac{p(D|\theta)p(\theta)}{q(\theta)}])$$
+
+By concavity of logarithm and Jensen's inequality...
+
+$$log(p(D)) = log(E_q[\frac{p(D|\theta)p(\theta)}{q(\theta)}]) \geq E_q[log(\frac{p(D|\theta)p(\theta)}{q(\theta)})]$$
 
 \textcolor{red}{
   TODO: finish KL-divergence section
