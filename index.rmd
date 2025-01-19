@@ -14,6 +14,12 @@ My name is Jeremy Austin and I am a PhD student in statistics at Michigan State 
 
 ## In The Works
 
-Variational Methods Writing Project (unfinished and many statements w/o proof or citation)
+Some works unfinished and some statements w/o proof
 
 - [Variational_Methods](./Variational_Methods/Variational_Methods.html)
+
+- [KL_Divergence_Two_Gaussians](./DKL_Gauss/Progress_Report2_MVGauss.html)
+
+- [Combining_Gaussian_Variational_Inference_With_Laplace_Approximation](./Combining_Laplace_And_GVA/Combining Gaussian Variational Approximation with Laplace Approximation.pdf)
+
+- [Monte_Hall](./Monte_Hall/Monte_Hall.html)
